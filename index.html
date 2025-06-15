@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>QR Order Lookup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            margin: auto;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+            .card h2 {
+                margin-bottom: 20px;
+                color: #d32f2f;
+            }
+
+        .row {
+            margin-bottom: 10px;
+        }
+
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 140px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Order Details</h2>
+        <div id="result">Loading...</div>
+    </div>
+
+    <script>
+        const sheetID = "1bXvE5KLtGxztwFU_XhgW03j6LTLRDkeTHEv9ppjoJxU";
+        const targetID = new URLSearchParams(window.location.search).get("id");
+
+        if (!targetID) {
+            document.getElementById("result").textContent = "No ID provided in URL.";
+        } else {
+            const sheetURL = `https://corsproxy.io/?https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
+
+            fetch(sheetURL)
+                .then(res => res.text())
+                .then(data => {
+                    const json = JSON.parse(data.substring(47).slice(0, -2));
+                    const rows = json.table.rows;
+                    const headers = json.table.cols.map(col => col.label);
+
+                    const formatted = rows.map(row => {
+                        let obj = {};
+                        row.c.forEach((cell, i) => {
+                            obj[headers[i]] = cell ? cell.v : "";
+                        });
+                        return obj;
+                    });
+
+                    const match = formatted.find(row => String(row["ID"]).trim() === targetID.trim());
+
+                    if (match) {
+                        document.getElementById("result").innerHTML = `
+                  <div class="row"><span class="label">ID:</span> ${match["ID"]}</div>
+                  <div class="row"><span class="label">وصف الطرود:</span> ${match["وصف الطرود"]}</div>
+                  <div class="row"><span class="label">الوزن:</span> ${match["الوزن"]}</div>
+                  <div class="row"><span class="label">الكمية:</span> ${match["الكمية"]}</div>
+                  <div class="row"><span class="label">السعر:</span> ${match["السعر"]}</div>
+                    <div class="row"><span class="label">الاجمالي:</span> ${match["الاجمالي"]}</div>
+                    <div class="row"><span class="label">حالة الطلب:</span> ${match["حالة الطلب"]}</div>
+                `;
+                    } else {
+                        document.getElementById("result").textContent = "No record found for ID: " + targetID;
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById("result").textContent = "Failed to fetch data.";
+                });
+        }
+    </script>
+</body>
+</html>
